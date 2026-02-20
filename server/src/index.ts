@@ -55,19 +55,25 @@ if (nodeEnv === "production") {
 }
 
 app.use(cors());
-app.use(clerkMiddleware());
-app.use("/mcp", mcpAuthClerk);
+
+if (nodeEnv === "production") {
+  app.use(clerkMiddleware());
+  app.use("/mcp", mcpAuthClerk);
+}
+
 app.use(mcp(server));
 
-app.get(
-  "/.well-known/oauth-protected-resource/mcp",
-  protectedResourceHandlerClerk({ scopes_supported: ["email", "profile"] }),
-);
+if (nodeEnv === "production") {
+  app.get(
+    "/.well-known/oauth-protected-resource/mcp",
+    protectedResourceHandlerClerk({ scopes_supported: ["email", "profile"] }),
+  );
 
-app.get(
-  "/.well-known/oauth-authorization-server",
-  authServerMetadataHandlerClerk,
-);
+  app.get(
+    "/.well-known/oauth-authorization-server",
+    authServerMetadataHandlerClerk,
+  );
+}
 
 app.listen(3000, () => {
   console.log("Server listening on http://localhost:3000");
