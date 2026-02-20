@@ -13,7 +13,7 @@ import {
   generateMessagePreviews,
   sendMessages,
 } from "@/data/meetup-service";
-import type { MeetupStep } from "@/types/meetup";
+import type { Contact, TimeSlot, MeetupStep } from "@/types/meetup";
 import { Maximize2, Minimize2 } from "lucide-react";
 
 type WidgetState = Record<string, unknown> & {
@@ -41,8 +41,8 @@ function PlanMeetup() {
   const { currentStep, selectedContactIds, selectedTimeSlotId, selectedRestaurantId } =
     state ?? initialState;
 
-  const contacts = (output?.contacts as typeof import("@/types/meetup").Contact[] | undefined) ?? getContacts();
-  const rawTimeSlots = (output?.timeSlots as typeof import("@/types/meetup").TimeSlot[] | undefined) ?? undefined;
+  const contacts = (output?.contacts as Contact[] | undefined) ?? getContacts();
+  const rawTimeSlots = output?.timeSlots as TimeSlot[] | undefined;
   const selectedContacts = contacts.filter((c) => selectedContactIds.includes(c.id));
   const availableSlots = rawTimeSlots
     ? rawTimeSlots.filter((s) => selectedContactIds.every((id) => s.availableFor.includes(id)))
