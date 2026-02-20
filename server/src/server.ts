@@ -150,7 +150,17 @@ const server = new McpServer(
 
       const whatsappLinks = selected.map((contact) => {
         const digits = contact.phone_number.replace(/\D/g, "");
-        const message = `Hey ${contact.name}! 🎉 We're meeting at ${restaurantName} (${restaurantAddress}) on ${date} at ${time}. See you there!`;
+        const first = contact.name.split(" ")[0];
+        const dietary = contact.dietary_restrictions.length > 0
+          ? ` They have ${contact.dietary_restrictions.join(" & ")} options.` : "";
+        const messages: Record<string, string> = {
+          bee: `Hey ${first}! 🐝 You can sit back on this one — I've sorted everything. We're going to ${restaurantName} (${restaurantAddress}) on ${date} at ${time}.${dietary} See you there!`,
+          captain: `${first}, mission briefing: ⚓ we're convening at ${restaurantName} (${restaurantAddress}) on ${date} at ${time}.${dietary} Don't be late!`,
+          golden_retriever: `${first}!! 🐶 We're all hanging out at ${restaurantName} on ${date} at ${time} — it's going to be SO good.${dietary} Can't wait to see you!`,
+          fruit_fly: `${first} 🪰 last-minute ping: ${restaurantName}, ${date} ${time}. Come if you can!${dietary}`,
+        };
+        const message = messages[contact.archetype] ??
+          `Hey ${first}! 🎉 We're meeting at ${restaurantName} (${restaurantAddress}) on ${date} at ${time}.${dietary} See you there!`;
         return {
           name: contact.name,
           phone: contact.phone_number,
@@ -318,7 +328,17 @@ const serverWithMeetup = server.registerWidget(
 
       const whatsappLinks = selected.map((contact) => {
         const digits = contact.phone_number.replace(/\D/g, "");
-        const message = `Hey ${contact.name}! 🎉 We're meeting at ${action.restaurantName} (${action.restaurantAddress}) on ${action.date} at ${action.time}. See you there!`;
+        const first = contact.name.split(" ")[0];
+        const dietary = contact.dietary_restrictions.length > 0
+          ? ` They have ${contact.dietary_restrictions.join(" & ")} options.` : "";
+        const messages: Record<string, string> = {
+          bee: `Hey ${first}! 🐝 You can sit back on this one — I've sorted everything. We're going to ${action.restaurantName} (${action.restaurantAddress}) on ${action.date} at ${action.time}.${dietary} See you there!`,
+          captain: `${first}, mission briefing: ⚓ we're convening at ${action.restaurantName} (${action.restaurantAddress}) on ${action.date} at ${action.time}.${dietary} Don't be late!`,
+          golden_retriever: `${first}!! 🐶 We're all hanging out at ${action.restaurantName} on ${action.date} at ${action.time} — it's going to be SO good.${dietary} Can't wait to see you!`,
+          fruit_fly: `${first} 🪰 last-minute ping: ${action.restaurantName}, ${action.date} ${action.time}. Come if you can!${dietary}`,
+        };
+        const message = messages[contact.archetype] ??
+          `Hey ${first}! 🎉 We're meeting at ${action.restaurantName} (${action.restaurantAddress}) on ${action.date} at ${action.time}.${dietary} See you there!`;
         const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
         return { name: contact.name, phone: contact.phone_number, url };
       });

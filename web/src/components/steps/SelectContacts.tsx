@@ -1,4 +1,5 @@
 import type { Contact } from "@/types/meetup";
+import { ARCHETYPE_LABEL, ARCHETYPE_DESCRIPTION } from "@/types/meetup";
 
 interface SelectContactsProps {
   contacts: Contact[];
@@ -47,7 +48,17 @@ export function SelectContacts({
                   {isSelected ? "+" : ""}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm">{contact.name}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="font-bold text-sm">{contact.name}</div>
+                    {contact.archetype && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 bg-yellow-400/10 text-yellow-300 border border-yellow-400/30"
+                        title={ARCHETYPE_DESCRIPTION[contact.archetype]}
+                      >
+                        {ARCHETYPE_LABEL[contact.archetype]}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-zinc-400 mt-0.5">
                     {contact.phone}
                   </div>

@@ -1,7 +1,24 @@
+export type Archetype = "bee" | "captain" | "golden_retriever" | "fruit_fly";
+
+export const ARCHETYPE_LABEL: Record<Archetype, string> = {
+  bee: "🐝 Bee",
+  captain: "⚓ Captain",
+  golden_retriever: "🐶 Golden Retriever",
+  fruit_fly: "🪰 Fruit Fly",
+};
+
+export const ARCHETYPE_DESCRIPTION: Record<Archetype, string> = {
+  bee: "organised & reliable",
+  captain: "organised but flaky",
+  golden_retriever: "reliable but laid-back",
+  fruit_fly: "spontaneous & unpredictable",
+};
+
 export interface Contact {
   id: string;
   name: string;
   phone: string;
+  archetype?: Archetype;
   avatarUrl?: string;
   cuisinePreferences: string[];
   dietaryRestrictions: string[];

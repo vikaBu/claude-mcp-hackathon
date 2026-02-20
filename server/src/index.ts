@@ -17,6 +17,29 @@ app.use(express.json());
 const nodeEnv = process.env.NODE_ENV || "development";
 
 if (nodeEnv !== "production") {
+  // Widget preview: serve HTML shell when navigating to /assets/<name>.js in a browser
+  // Must be before widgetsDevServer so browser navigations get HTML, not raw JS
+  app.get("/assets/:widgetName.js", (req, res, next) => {
+    if (!req.headers.accept?.includes("text/html")) return next();
+    const widgetName = req.params.widgetName;
+    res.send(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${widgetName}</title><style>body{margin:0;background:#18181b;}</style></head>
+<body>
+<script type="module">window.skybridge = { hostType: "mcp-app", serverUrl: "http://localhost:3000" };</script>
+<script type="module">
+  import { injectIntoGlobalHook } from "http://localhost:3000/assets/@react-refresh";
+  injectIntoGlobalHook(window); window.$RefreshReg$ = () => {};
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
+<script type="module" src="http://localhost:3000/@vite/client"></script>
+<div id="root"></div>
+<script type="module">import("http://localhost:3000/src/widgets/${widgetName}");</script>
+</body>
+</html>`);
+  });
+
   const { devtoolsStaticServer } = await import("@skybridge/devtools");
   app.use(await devtoolsStaticServer());
   app.use(await widgetsDevServer());

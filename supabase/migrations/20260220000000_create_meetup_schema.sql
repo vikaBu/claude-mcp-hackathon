@@ -58,10 +58,9 @@ begin
     ('demo-user', 'Alice',   '+14155550101', 'bee',              array['italian','japanese'],   array[]::text[]),
     ('demo-user', 'Bob',     '+14155550102', 'captain',          array['mexican','american'],   array['gluten-free']),
     ('demo-user', 'Cara',    '+14155550103', 'golden_retriever', array['thai','italian'],        array['vegetarian']),
-    ('demo-user', 'Dan',     '+14155550104', 'fruit_fly',        array['japanese','thai'],       array[]::text[])
-  returning id into alice_id;
+    ('demo-user', 'Dan',     '+14155550104', 'fruit_fly',        array['japanese','thai'],       array[]::text[]);
 
-  -- re-fetch individual ids
+  -- fetch individual ids
   select id into alice_id from contacts where user_id = 'demo-user' and name = 'Alice';
   select id into bob_id   from contacts where user_id = 'demo-user' and name = 'Bob';
   select id into cara_id  from contacts where user_id = 'demo-user' and name = 'Cara';
