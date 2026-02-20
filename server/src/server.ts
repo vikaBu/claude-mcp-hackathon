@@ -238,9 +238,12 @@ const serverWithMeetup = server.registerWidget(
           isError: true,
         };
       }
+      const contactList = contacts
+        .map((c) => `- ${c.name} (id: ${c.id}, phone: ${c.phone_number}, cuisines: ${c.cuisine_preferences.join(", ")}, dietary: ${c.dietary_restrictions.join(", ") || "none"})`)
+        .join("\n");
       return {
         structuredContent: { step: "select-contacts", contacts },
-        content: [{ type: "text", text: `Found ${contacts.length} contacts.` }],
+        content: [{ type: "text", text: `Found ${contacts.length} contacts:\n${contactList}` }],
       };
     }
 
@@ -252,12 +255,17 @@ const serverWithMeetup = server.registerWidget(
           isError: true,
         };
       }
+      const slotList = slots
+        .map((s) => `- ${s.date} ${s.startTime}–${s.endTime}`)
+        .join("\n");
       return {
         structuredContent: { step: "pick-time", slots },
         content: [
           {
             type: "text",
-            text: `Found ${slots.length} overlapping time slot(s).`,
+            text: slots.length > 0
+              ? `Found ${slots.length} overlapping time slot(s):\n${slotList}`
+              : "No overlapping time slots found for the selected contacts.",
           },
         ],
       };
@@ -298,10 +306,18 @@ const serverWithMeetup = server.registerWidget(
         };
       }
 
+      const restaurantList = restaurants
+        .map((r) => `- ${r.name} (id: ${r.id}, rating: ${r.rating}, address: ${r.address})`)
+        .join("\n");
       return {
         structuredContent: { step: "pick-restaurant", restaurants },
         content: [
-          { type: "text", text: `Found ${restaurants.length} restaurant(s).` },
+          {
+            type: "text",
+            text: restaurants.length > 0
+              ? `Found ${restaurants.length} restaurant(s):\n${restaurantList}`
+              : "No restaurants found for that location.",
+          },
         ],
       };
     }
@@ -343,6 +359,7 @@ const serverWithMeetup = server.registerWidget(
         return { name: contact.name, phone: contact.phone_number, url };
       });
 
+      const linkList = whatsappLinks.map((l) => `- ${l.name} (${l.phone}): ${l.url}`).join("\n");
       return {
         structuredContent: {
           step: "confirmed",
@@ -358,7 +375,7 @@ const serverWithMeetup = server.registerWidget(
         content: [
           {
             type: "text",
-            text: `Meetup confirmed at ${action.restaurantName} on ${action.date} at ${action.time}. ${whatsappLinks.length} WhatsApp link(s) ready.`,
+            text: `Meetup confirmed at ${action.restaurantName} on ${action.date} at ${action.time}.\n\nWhatsApp links:\n${linkList}`,
           },
         ],
       };
