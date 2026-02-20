@@ -1,11 +1,11 @@
 import { McpServer } from "skybridge/server";
 import { z } from "zod";
 import { env } from "./env.js";
-import { executeActions, fetchTasks } from "./supabase.js";
 import {
   fetchContacts,
   findOverlappingSlots,
   createMeetup,
+  fetchAllTimeSlotsWithAvailability,
 } from "./meetup-db.js";
 import { fetchRestaurants } from "./restaurants.js";
 
@@ -50,18 +50,14 @@ const server = new McpServer(
       },
     },
     async ({ prompt }, extra) => {
-      const userId = (extra.authInfo?.extra as any)?.userId as
-        | string
-        | undefined;
+      const userId =
+        ((extra.authInfo?.extra as Record<string, unknown>)?.userId as
+          | string
+          | undefined) ?? "demo-user";
 
       if (!userId) {
         return {
-          content: [
-            {
-              type: "text",
-              text: "Please sign in to plan a meetup.",
-            },
-          ],
+          content: [{ type: "text", text: "Please sign in to plan a meetup." }],
           isError: true,
           _meta: {
             "mcp/www_authenticate": [
@@ -71,17 +67,39 @@ const server = new McpServer(
         };
       }
 
+      const { contacts, error: contactsError } = await fetchContacts(userId);
+      if (contactsError) {
+        return {
+          content: [{ type: "text", text: `Error loading contacts: ${contactsError.message}` }],
+          isError: true,
+        };
+      }
+
+      const contactIds = contacts.map((c) => c.id);
+      const { slots } = await fetchAllTimeSlotsWithAvailability(contactIds);
+
+      // Map DB contacts to UI shape
+      const uiContacts = contacts.map((c) => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone_number,
+        cuisinePreferences: c.cuisine_preferences,
+        dietaryRestrictions: c.dietary_restrictions,
+      }));
+
       return {
         structuredContent: {
           status: "ready",
           prompt: prompt ?? null,
+          contacts: uiContacts,
+          timeSlots: slots,
         },
         content: [
           {
             type: "text",
             text: prompt
               ? `Meetup planner opened with prompt: "${prompt}"`
-              : "Meetup planner opened. Select contacts to get started.",
+              : `Meetup planner opened. ${uiContacts.length} contacts loaded.`,
           },
         ],
       };
@@ -91,41 +109,61 @@ const server = new McpServer(
     "send-meetup-invites",
     {
       description:
-        "Send WhatsApp invites to selected contacts for a meetup at the chosen time and restaurant",
+        "Confirm a meetup by saving it to the database and returning WhatsApp deep-links for each contact",
       inputSchema: {
-        contactIds: z.array(z.string()).describe("IDs of contacts to invite"),
-        timeSlotId: z.string().describe("Selected time slot ID"),
-        restaurantId: z.string().describe("Selected restaurant ID"),
+        contactIds: z.array(z.string()).describe("DB contact UUIDs to invite"),
+        restaurantName: z.string().describe("Name of the chosen restaurant"),
+        restaurantAddress: z.string().default("").describe("Address of the restaurant"),
+        date: z.string().describe("Meetup date in YYYY-MM-DD format"),
+        time: z.string().describe("Meetup time in HH:MM format"),
       },
       annotations: {
         readOnlyHint: false,
-        openWorldHint: true,
+        openWorldHint: false,
         destructiveHint: false,
       },
     },
-    async ({ contactIds, timeSlotId, restaurantId }, extra) => {
-      const userId = (extra.authInfo?.extra as any)?.userId as
-        | string
-        | undefined;
+    async ({ contactIds, restaurantName, restaurantAddress, date, time }, extra) => {
+      const userId =
+        ((extra.authInfo?.extra as Record<string, unknown>)?.userId as
+          | string
+          | undefined) ?? "demo-user";
 
-      if (!userId) {
+      const { meetup, error: meetupError } = await createMeetup(userId, {
+        restaurantName,
+        restaurantYelpId: null,
+        restaurantAddress,
+        date,
+        time,
+        contactIds,
+      });
+
+      if (meetupError || !meetup) {
         return {
-          content: [{ type: "text", text: "Please sign in to send invites." }],
+          content: [{ type: "text", text: `Error saving meetup: ${meetupError?.message}` }],
           isError: true,
         };
       }
 
+      const { contacts } = await fetchContacts(userId);
+      const selected = contacts.filter((c) => contactIds.includes(c.id));
+
+      const whatsappLinks = selected.map((contact) => {
+        const digits = contact.phone_number.replace(/\D/g, "");
+        const message = `Hey ${contact.name}! 🎉 We're meeting at ${restaurantName} (${restaurantAddress}) on ${date} at ${time}. See you there!`;
+        return {
+          name: contact.name,
+          phone: contact.phone_number,
+          url: `https://wa.me/${digits}?text=${encodeURIComponent(message)}`,
+        };
+      });
+
       return {
-        structuredContent: {
-          sent: true,
-          contactIds,
-          timeSlotId,
-          restaurantId,
-        },
+        structuredContent: { meetupId: meetup.id, whatsappLinks },
         content: [
           {
             type: "text",
-            text: `WhatsApp invites sent to ${contactIds.length} contacts for meetup.`,
+            text: `Meetup saved! WhatsApp links ready for ${whatsappLinks.length} contacts.`,
           },
         ],
       };

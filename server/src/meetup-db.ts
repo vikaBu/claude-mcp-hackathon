@@ -16,6 +16,15 @@ export interface TimeSlot {
   endTime: string;
 }
 
+// UI-compatible timeslot with availableFor array and stable id
+export interface UITimeSlot {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  availableFor: string[]; // contact IDs
+}
+
 export interface Meetup {
   id: string;
   user_id: string;
@@ -140,6 +149,52 @@ export async function createMeetup(
   }
 
   return { meetup, participants: (participantRows as MeetupParticipant[]) ?? [], error: null };
+}
+
+export async function fetchAllTimeSlotsWithAvailability(
+  contactIds: string[],
+): Promise<{ slots: UITimeSlot[]; error: Error | null }> {
+  if (contactIds.length === 0) {
+    return { slots: [], error: null };
+  }
+
+  const { data, error } = await supabase
+    .from("availability")
+    .select("contact_id, date, start_time, end_time")
+    .in("contact_id", contactIds);
+
+  if (error) {
+    return { slots: [], error: new Error(error.message) };
+  }
+
+  const rows = data as { contact_id: string; date: string; start_time: string; end_time: string }[];
+
+  // Group by (date, start_time, end_time), collect all contact_ids per slot
+  const slotMap = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const key = `${row.date}|${row.start_time}|${row.end_time}`;
+    if (!slotMap.has(key)) slotMap.set(key, new Set());
+    slotMap.get(key)!.add(row.contact_id);
+  }
+
+  const slots: UITimeSlot[] = [];
+  for (const [key, availableSet] of slotMap.entries()) {
+    const [date, startTime, endTime] = key.split("|");
+    slots.push({
+      id: `slot-${date}-${startTime.replace(":", "")}`,
+      date,
+      startTime: startTime.slice(0, 5),
+      endTime: endTime.slice(0, 5),
+      availableFor: Array.from(availableSet),
+    });
+  }
+
+  slots.sort((a, b) => {
+    const d = a.date.localeCompare(b.date);
+    return d !== 0 ? d : a.startTime.localeCompare(b.startTime);
+  });
+
+  return { slots, error: null };
 }
 
 export async function markMessageSent(meetupId: string, contactId: string): Promise<{ error: Error | null }> {

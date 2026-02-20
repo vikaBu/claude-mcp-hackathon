@@ -55,8 +55,14 @@ export function generateMessagePreviews(
 }
 
 export async function sendMessages(
-  _previews: MessagePreview[],
+  previews: MessagePreview[],
 ): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  for (const preview of previews) {
+    const digits = preview.phone.replace(/\D/g, "");
+    const url = `https://wa.me/${digits}?text=${encodeURIComponent(preview.message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    // small delay so browsers don't block multiple popups
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
   return { success: true };
 }

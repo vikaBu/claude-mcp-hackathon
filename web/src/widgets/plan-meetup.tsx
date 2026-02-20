@@ -41,9 +41,12 @@ function PlanMeetup() {
   const { currentStep, selectedContactIds, selectedTimeSlotId, selectedRestaurantId } =
     state ?? initialState;
 
-  const contacts = getContacts();
+  const contacts = (output?.contacts as typeof import("@/types/meetup").Contact[] | undefined) ?? getContacts();
+  const rawTimeSlots = (output?.timeSlots as typeof import("@/types/meetup").TimeSlot[] | undefined) ?? undefined;
   const selectedContacts = contacts.filter((c) => selectedContactIds.includes(c.id));
-  const availableSlots = getAvailableTimeSlots(selectedContactIds);
+  const availableSlots = rawTimeSlots
+    ? rawTimeSlots.filter((s) => selectedContactIds.every((id) => s.availableFor.includes(id)))
+    : getAvailableTimeSlots(selectedContactIds);
   const restaurants = getRestaurantRecommendations(selectedContacts);
   const selectedSlot = availableSlots.find((s) => s.id === selectedTimeSlotId) ?? null;
   const selectedRestaurant = restaurants.find((r) => r.id === selectedRestaurantId) ?? null;
