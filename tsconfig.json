@@ -16,7 +16,12 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "noEmit": true
+    "noEmit": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["web/src/*"]
+    }
   },
   "include": ["server/src", "web/src", "web/vite.config.ts"],
   "exclude": ["dist", "node_modules"]
