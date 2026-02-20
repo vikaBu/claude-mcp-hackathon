@@ -12,6 +12,10 @@ import server from "./server.js";
 
 const app = express();
 
+// Trust the proxy (cloudflared/Alpic) so req.protocol returns https
+// This ensures OAuth metadata URLs use https:// not http://
+app.set("trust proxy", 1);
+
 app.use(express.json());
 
 const nodeEnv = process.env.NODE_ENV || "development";
