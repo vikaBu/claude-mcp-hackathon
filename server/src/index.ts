@@ -26,20 +26,21 @@ if (nodeEnv !== "production") {
   app.get("/assets/:widgetName.js", (req, res, next) => {
     if (!req.headers.accept?.includes("text/html")) return next();
     const widgetName = req.params.widgetName;
+    const origin = `${req.protocol}://${req.get("host")}`;
     res.send(`<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>${widgetName}</title><style>body{margin:0;background:#18181b;}</style></head>
 <body>
-<script type="module">window.skybridge = { hostType: "mcp-app", serverUrl: "http://localhost:3000" };</script>
+<script type="module">window.skybridge = { hostType: "mcp-app", serverUrl: "${origin}" };</script>
 <script type="module">
-  import { injectIntoGlobalHook } from "http://localhost:3000/assets/@react-refresh";
+  import { injectIntoGlobalHook } from "${origin}/assets/@react-refresh";
   injectIntoGlobalHook(window); window.$RefreshReg$ = () => {};
   window.$RefreshSig$ = () => (type) => type;
   window.__vite_plugin_react_preamble_installed__ = true;
 </script>
-<script type="module" src="http://localhost:3000/@vite/client"></script>
+<script type="module" src="${origin}/@vite/client"></script>
 <div id="root"></div>
-<script type="module">import("http://localhost:3000/src/widgets/${widgetName}");</script>
+<script type="module">import("${origin}/src/widgets/${widgetName}");</script>
 </body>
 </html>`);
   });
