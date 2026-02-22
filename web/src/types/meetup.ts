@@ -55,4 +55,4 @@ export interface MessagePreview {
   message: string;
 }
 
-export type MeetupStep = "contacts" | "time" | "restaurant" | "confirm";
+export type MeetupStep = "splash" | "contacts" | "time" | "restaurant" | "confirm";

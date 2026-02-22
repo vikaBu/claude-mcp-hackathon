@@ -2,6 +2,7 @@ import "@/index.css";
 import { mountWidget, useLayout, useDisplayMode, useWidgetState } from "skybridge/web";
 import { useToolInfo } from "../helpers";
 import { StepProgress } from "@/components/StepProgress";
+import { Splash } from "@/components/steps/Splash";
 import { SelectContacts } from "@/components/steps/SelectContacts";
 import { PickTime } from "@/components/steps/PickTime";
 import { PickRestaurant } from "@/components/steps/PickRestaurant";
@@ -24,7 +25,7 @@ type WidgetState = Record<string, unknown> & {
 };
 
 const initialState: WidgetState = {
-  currentStep: "contacts",
+  currentStep: "splash",
   selectedContactIds: [],
   selectedTimeSlotId: null,
   selectedRestaurantId: null,
@@ -123,7 +124,11 @@ function PlanMeetup() {
         </div>
       )}
 
-      <StepProgress currentStep={currentStep} />
+      {currentStep !== "splash" && <StepProgress currentStep={currentStep} />}
+
+      {currentStep === "splash" && (
+        <Splash onStart={() => goTo("contacts")} />
+      )}
 
       {currentStep === "contacts" && (
         <SelectContacts
