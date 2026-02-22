@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Contact, TimeSlot, Restaurant, MessagePreview } from "@/types/meetup";
+import type { Contact, TimeSlot, MeetupMode, MessagePreview } from "@/types/meetup";
 import { Button } from "@/components/ui/8bit/button";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/8bit/badge";
@@ -8,10 +8,11 @@ import { Separator } from "@/components/ui/8bit/separator";
 interface ConfirmSendProps {
   contacts: Contact[];
   timeSlot: TimeSlot;
-  restaurant: Restaurant;
+  venueName: string;
   previews: MessagePreview[];
   onSend: () => Promise<void>;
   onBack: () => void;
+  mode: MeetupMode;
 }
 
 function formatDate(dateStr: string): string {
@@ -34,10 +35,11 @@ function formatTime(time: string): string {
 export function ConfirmSend({
   contacts,
   timeSlot,
-  restaurant,
+  venueName,
   previews,
   onSend,
   onBack,
+  mode: _mode,
 }: ConfirmSendProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -56,7 +58,7 @@ export function ConfirmSend({
         <p className="retro text-green-400 text-sm">Invites Sent!</p>
         <p className="text-xs text-muted-foreground text-center">
           WhatsApp messages sent to {contacts.length} people for{" "}
-          {restaurant.name} on {formatDate(timeSlot.date)}.
+          {venueName} on {formatDate(timeSlot.date)}.
         </p>
         <div className="flex flex-col gap-1 w-full mt-2">
           {contacts.map((c) => (
@@ -99,7 +101,7 @@ export function ConfirmSend({
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Where</span>
-              <span className="text-foreground">{restaurant.name}</span>
+              <span className="text-foreground">{venueName}</span>
             </div>
           </div>
         </CardContent>

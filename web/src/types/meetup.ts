@@ -56,3 +56,13 @@ export interface MessagePreview {
 }
 
 export type MeetupStep = "splash" | "contacts" | "time" | "restaurant" | "confirm";
+
+export type MeetupMode = "social" | "work";
+export type WorkVenueType = "office" | "google_meet" | "pub";
+
+export interface WorkVenue {
+  id: WorkVenueType;
+  name: string;
+  description: string;
+  icon: string;
+}

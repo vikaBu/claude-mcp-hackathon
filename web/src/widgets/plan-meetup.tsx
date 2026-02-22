@@ -1,4 +1,5 @@
 import "@/index.css";
+import { useEffect } from "react";
 import { mountWidget, useLayout, useDisplayMode, useWidgetState } from "skybridge/web";
 import { useToolInfo } from "../helpers";
 import { StepProgress } from "@/components/StepProgress";
@@ -6,29 +7,37 @@ import { Splash } from "@/components/steps/Splash";
 import { SelectContacts } from "@/components/steps/SelectContacts";
 import { PickTime } from "@/components/steps/PickTime";
 import { PickRestaurant } from "@/components/steps/PickRestaurant";
+import { PickVenue } from "@/components/steps/PickVenue";
 import { ConfirmSend } from "@/components/steps/ConfirmSend";
 import {
   getContacts,
   getAvailableTimeSlots,
   getRestaurantRecommendations,
   generateMessagePreviews,
+  getWorkVenues,
+  generateWorkMessagePreviews,
+  inferMode,
   sendMessages,
 } from "@/data/meetup-service";
-import type { Contact, TimeSlot, MeetupStep } from "@/types/meetup";
+import type { Contact, TimeSlot, MeetupStep, MeetupMode, WorkVenueType } from "@/types/meetup";
 import "@/components/ui/8bit/styles/retro.css";
 
 type WidgetState = Record<string, unknown> & {
   currentStep: MeetupStep;
+  mode: MeetupMode;
   selectedContactIds: string[];
   selectedTimeSlotId: string | null;
   selectedRestaurantId: string | null;
+  selectedVenueId: WorkVenueType | null;
 };
 
 const initialState: WidgetState = {
   currentStep: "splash",
+  mode: "social",
   selectedContactIds: [],
   selectedTimeSlotId: null,
   selectedRestaurantId: null,
+  selectedVenueId: null,
 };
 
 function PlanMeetup() {
@@ -40,9 +49,11 @@ function PlanMeetup() {
 
   const [state, setState] = useWidgetState<WidgetState>(initialState);
   const currentStep = state?.currentStep ?? initialState.currentStep;
+  const mode = (state?.mode as MeetupMode) ?? initialState.mode;
   const selectedContactIds = state?.selectedContactIds ?? initialState.selectedContactIds;
   const selectedTimeSlotId = state?.selectedTimeSlotId ?? initialState.selectedTimeSlotId;
   const selectedRestaurantId = state?.selectedRestaurantId ?? initialState.selectedRestaurantId;
+  const selectedVenueId = (state?.selectedVenueId as WorkVenueType | null) ?? initialState.selectedVenueId;
 
   const contacts = (output?.contacts as Contact[] | undefined) ?? getContacts();
   const rawTimeSlots = output?.timeSlots as TimeSlot[] | undefined;
@@ -54,10 +65,25 @@ function PlanMeetup() {
   const selectedSlot = availableSlots.find((s) => s.id === selectedTimeSlotId) ?? null;
   const selectedRestaurant = restaurants.find((r) => r.id === selectedRestaurantId) ?? null;
 
+  const workVenues = getWorkVenues();
+  const selectedVenue = workVenues.find((v) => v.id === selectedVenueId) ?? null;
+
+  const inferredMode = inferMode(output?.prompt as string | undefined);
+
+  useEffect(() => {
+    if (currentStep === "splash" && mode === "social" && inferredMode === "work") {
+      setState((prev) => ({ ...mergeState(prev), mode: "work" }));
+    }
+  }, [inferredMode]);
+
   const previews =
-    selectedSlot && selectedRestaurant
-      ? generateMessagePreviews(selectedContacts, selectedSlot, selectedRestaurant)
-      : [];
+    mode === "work"
+      ? selectedSlot && selectedVenue
+        ? generateWorkMessagePreviews(selectedContacts, selectedSlot, selectedVenue)
+        : []
+      : selectedSlot && selectedRestaurant
+        ? generateMessagePreviews(selectedContacts, selectedSlot, selectedRestaurant)
+        : [];
 
   const mergeState = (prev: WidgetState | null | undefined): WidgetState => ({
     ...initialState,
@@ -79,10 +105,12 @@ function PlanMeetup() {
   };
 
   const llmSummary = [
+    `Mode: ${mode}`,
     `Step: ${currentStep}`,
     `Contacts: ${selectedContacts.map((c) => c.name).join(", ") || "none"}`,
     selectedSlot ? `Time: ${selectedSlot.date} ${selectedSlot.startTime}` : null,
-    selectedRestaurant ? `Restaurant: ${selectedRestaurant.name}` : null,
+    mode === "social" && selectedRestaurant ? `Restaurant: ${selectedRestaurant.name}` : null,
+    mode === "work" && selectedVenue ? `Venue: ${selectedVenue.name}` : null,
   ]
     .filter(Boolean)
     .join(" | ");
@@ -127,7 +155,18 @@ function PlanMeetup() {
       {currentStep !== "splash" && <StepProgress currentStep={currentStep} />}
 
       {currentStep === "splash" && (
-        <Splash onStart={() => goTo("contacts")} />
+        <Splash
+          onStart={() => goTo("contacts")}
+          mode={mode}
+          onModeChange={(newMode) =>
+            setState((prev) => ({
+              ...mergeState(prev),
+              mode: newMode,
+              selectedRestaurantId: null,
+              selectedVenueId: null,
+            }))
+          }
+        />
       )}
 
       {currentStep === "contacts" && (
@@ -149,10 +188,11 @@ function PlanMeetup() {
           }
           onNext={() => goTo("restaurant")}
           onBack={() => goTo("contacts")}
+          mode={mode}
         />
       )}
 
-      {currentStep === "restaurant" && (
+      {currentStep === "restaurant" && mode === "social" && (
         <PickRestaurant
           restaurants={restaurants}
           selectedId={selectedRestaurantId}
@@ -164,14 +204,27 @@ function PlanMeetup() {
         />
       )}
 
-      {currentStep === "confirm" && selectedSlot && selectedRestaurant && (
+      {currentStep === "restaurant" && mode === "work" && (
+        <PickVenue
+          venues={workVenues}
+          selectedId={selectedVenueId}
+          onSelect={(id) =>
+            setState((prev) => ({ ...mergeState(prev), selectedVenueId: id }))
+          }
+          onNext={() => goTo("confirm")}
+          onBack={() => goTo("time")}
+        />
+      )}
+
+      {currentStep === "confirm" && selectedSlot && (mode === "social" ? selectedRestaurant : selectedVenue) && (
         <ConfirmSend
           contacts={selectedContacts}
           timeSlot={selectedSlot}
-          restaurant={selectedRestaurant}
+          venueName={mode === "social" ? selectedRestaurant!.name : selectedVenue!.name}
           previews={previews}
           onSend={() => sendMessages(previews).then(() => {})}
           onBack={() => goTo("restaurant")}
+          mode={mode}
         />
       )}
     </div>

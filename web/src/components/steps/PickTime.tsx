@@ -1,4 +1,4 @@
-import type { TimeSlot } from "@/types/meetup";
+import type { TimeSlot, MeetupMode } from "@/types/meetup";
 import { Button } from "@/components/ui/8bit/button";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/8bit/badge";
@@ -10,6 +10,7 @@ interface PickTimeProps {
   onSelect: (id: string) => void;
   onNext: () => void;
   onBack: () => void;
+  mode: MeetupMode;
 }
 
 function formatDate(dateStr: string): string {
@@ -36,6 +37,7 @@ export function PickTime({
   onSelect,
   onNext,
   onBack,
+  mode,
 }: PickTimeProps) {
   const totalContacts = selectedContactIds.length;
   if (timeSlots.length === 0) {
@@ -122,7 +124,7 @@ export function PickTime({
           variant={selectedId ? "default" : "secondary"}
           className="flex-1 text-xs"
         >
-          Next: Pick Restaurant
+          {mode === "work" ? "Next: Pick Venue" : "Next: Pick Restaurant"}
         </Button>
       </div>
     </div>
