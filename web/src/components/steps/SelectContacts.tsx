@@ -1,5 +1,9 @@
 import type { Contact } from "@/types/meetup";
 import { ARCHETYPE_LABEL, ARCHETYPE_DESCRIPTION } from "@/types/meetup";
+import { Button } from "@/components/ui/8bit/button";
+import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Badge } from "@/components/ui/8bit/badge";
+import { Checkbox } from "@/components/ui/8bit/checkbox";
 
 interface SelectContactsProps {
   contacts: Contact[];
@@ -18,91 +22,90 @@ export function SelectContacts({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-zinc-400 font-heading">
+      <p className="retro text-[10px] text-muted-foreground">
         Select 2+ people to meet up with
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {contacts.map((contact) => {
           const isSelected = selectedIds.includes(contact.id);
           return (
-            <button
+            <Card
               key={contact.id}
+              font="normal"
+              className={`cursor-pointer transition-colors ${
+                isSelected
+                  ? "!border-primary bg-primary/10"
+                  : "hover:!border-muted-foreground"
+              }`}
               onClick={() => onToggle(contact.id)}
-              className={`
-                text-left p-3 border-2 transition-colors cursor-pointer
-                ${
-                  isSelected
-                    ? "border-yellow-400 bg-yellow-400/10"
-                    : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500"
-                }
-              `}
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`
-                    w-5 h-5 border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5
-                    ${isSelected ? "border-yellow-400 bg-yellow-400/20 text-yellow-300" : "border-zinc-600"}
-                  `}
-                >
-                  {isSelected ? "+" : ""}
+              <CardContent font="normal" className="p-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={isSelected}
+                    className="mt-0.5"
+                    font="normal"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-foreground">
+                        {contact.name}
+                      </span>
+                      {contact.archetype && (
+                        <Badge
+                          font="retro"
+                          className="text-[8px] bg-primary/20 text-primary border-primary/40"
+                          title={ARCHETYPE_DESCRIPTION[contact.archetype]}
+                        >
+                          {ARCHETYPE_LABEL[contact.archetype]}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {contact.phone}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {contact.cuisinePreferences.map((c) => (
+                        <Badge
+                          key={c}
+                          variant="secondary"
+                          font="normal"
+                          className="text-[9px] bg-blue-500/20 text-blue-300 border-blue-500/30"
+                        >
+                          {c}
+                        </Badge>
+                      ))}
+                      {contact.dietaryRestrictions.map((r) => (
+                        <Badge
+                          key={r}
+                          variant="secondary"
+                          font="normal"
+                          className="text-[9px] bg-orange-500/20 text-orange-300 border-orange-500/30"
+                        >
+                          {r}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="font-bold text-sm">{contact.name}</div>
-                    {contact.archetype && (
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 bg-yellow-400/10 text-yellow-300 border border-yellow-400/30"
-                        title={ARCHETYPE_DESCRIPTION[contact.archetype]}
-                      >
-                        {ARCHETYPE_LABEL[contact.archetype]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-zinc-400 mt-0.5">
-                    {contact.phone}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {contact.cuisinePreferences.map((c) => (
-                      <span
-                        key={c}
-                        className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      >
-                        {c}
-                      </span>
-                    ))}
-                    {contact.dietaryRestrictions.map((r) => (
-                      <span
-                        key={r}
-                        className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-300 border border-orange-500/30"
-                      >
-                        {r}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </button>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!canProceed}
-        className={`
-          w-full py-2.5 font-heading text-xs border-2 transition-colors
-          ${
-            canProceed
-              ? "border-yellow-400 bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30 cursor-pointer"
-              : "border-zinc-700 bg-zinc-800/50 text-zinc-500 cursor-not-allowed"
-          }
-        `}
+        variant={canProceed ? "default" : "secondary"}
+        className="w-full text-xs"
+        size="lg"
       >
         {canProceed
           ? `Next: Pick a Time (${selectedIds.length} selected)`
-          : `Select at least 2 contacts`}
-      </button>
+          : "Select at least 2 contacts"}
+      </Button>
     </div>
   );
 }

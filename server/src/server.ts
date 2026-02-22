@@ -67,32 +67,32 @@ const server = new McpServer(
         };
       }
 
+      let uiContacts: Array<{ id: string; name: string; phone: string; cuisinePreferences: string[]; dietaryRestrictions: string[] }> = [];
+      let slots: Awaited<ReturnType<typeof fetchAllTimeSlotsWithAvailability>>["slots"] = [];
+
       const { contacts, error: contactsError } = await fetchContacts(userId);
       if (contactsError) {
-        return {
-          content: [{ type: "text", text: `Error loading contacts: ${contactsError.message}` }],
-          isError: true,
-        };
+        console.warn(`Supabase unreachable, widget will use client-side mock data: ${contactsError.message}`);
+      } else {
+        const contactIds = contacts.map((c) => c.id);
+        const slotsResult = await fetchAllTimeSlotsWithAvailability(contactIds);
+        slots = slotsResult.slots;
+
+        uiContacts = contacts.map((c) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone_number,
+          cuisinePreferences: c.cuisine_preferences,
+          dietaryRestrictions: c.dietary_restrictions,
+        }));
       }
-
-      const contactIds = contacts.map((c) => c.id);
-      const { slots } = await fetchAllTimeSlotsWithAvailability(contactIds);
-
-      // Map DB contacts to UI shape
-      const uiContacts = contacts.map((c) => ({
-        id: c.id,
-        name: c.name,
-        phone: c.phone_number,
-        cuisinePreferences: c.cuisine_preferences,
-        dietaryRestrictions: c.dietary_restrictions,
-      }));
 
       return {
         structuredContent: {
           status: "ready",
           prompt: prompt ?? null,
-          contacts: uiContacts,
-          timeSlots: slots,
+          contacts: uiContacts.length > 0 ? uiContacts : undefined,
+          timeSlots: slots.length > 0 ? slots : undefined,
         },
         content: [
           {

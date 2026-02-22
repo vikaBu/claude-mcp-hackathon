@@ -14,7 +14,7 @@ import {
   sendMessages,
 } from "@/data/meetup-service";
 import type { Contact, TimeSlot, MeetupStep } from "@/types/meetup";
-import { Maximize2, Minimize2 } from "lucide-react";
+import "@/components/ui/8bit/styles/retro.css";
 
 type WidgetState = Record<string, unknown> & {
   currentStep: MeetupStep;
@@ -38,8 +38,10 @@ function PlanMeetup() {
   const isFullscreen = displayMode === "fullscreen";
 
   const [state, setState] = useWidgetState<WidgetState>(initialState);
-  const { currentStep, selectedContactIds, selectedTimeSlotId, selectedRestaurantId } =
-    state ?? initialState;
+  const currentStep = state?.currentStep ?? initialState.currentStep;
+  const selectedContactIds = state?.selectedContactIds ?? initialState.selectedContactIds;
+  const selectedTimeSlotId = state?.selectedTimeSlotId ?? initialState.selectedTimeSlotId;
+  const selectedRestaurantId = state?.selectedRestaurantId ?? initialState.selectedRestaurantId;
 
   const contacts = (output?.contacts as Contact[] | undefined) ?? getContacts();
   const rawTimeSlots = output?.timeSlots as TimeSlot[] | undefined;
@@ -56,9 +58,14 @@ function PlanMeetup() {
       ? generateMessagePreviews(selectedContacts, selectedSlot, selectedRestaurant)
       : [];
 
+  const mergeState = (prev: WidgetState | null | undefined): WidgetState => ({
+    ...initialState,
+    ...(prev ?? {}),
+  });
+
   const toggleContact = (id: string) => {
     setState((prev) => {
-      const s = prev ?? initialState;
+      const s = mergeState(prev);
       const ids = s.selectedContactIds.includes(id)
         ? s.selectedContactIds.filter((cid) => cid !== id)
         : [...s.selectedContactIds, id];
@@ -67,7 +74,7 @@ function PlanMeetup() {
   };
 
   const goTo = (step: MeetupStep) => {
-    setState((prev) => ({ ...(prev ?? initialState), currentStep: step }));
+    setState((prev) => ({ ...mergeState(prev), currentStep: step }));
   };
 
   const llmSummary = [
@@ -79,12 +86,14 @@ function PlanMeetup() {
     .filter(Boolean)
     .join(" | ");
 
-  if (isPending) {
+  // In standalone preview mode (no tool invocation), isPending stays true forever.
+  // Only show loading if we have a server context that's still resolving.
+  if (isPending && output !== undefined) {
     return (
       <div className={`${isDark ? "dark" : ""} p-4`}>
         <div className="flex flex-col items-center gap-3 py-8">
-          <div className="text-2xl animate-pulse">...</div>
-          <p className="font-heading text-xs text-zinc-400">
+          <div className="retro text-2xl text-primary animate-pulse">...</div>
+          <p className="retro text-xs text-muted-foreground">
             Loading Meetup Planner
           </p>
         </div>
@@ -96,20 +105,20 @@ function PlanMeetup() {
     <div className={`${isDark ? "dark" : ""} p-4 max-w-lg mx-auto`} data-llm={llmSummary}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="font-heading text-sm text-yellow-300">
+        <h1 className="retro text-sm text-primary">
           Meetup Planner
         </h1>
         <button
           onClick={() => requestDisplayMode(isFullscreen ? "inline" : "fullscreen")}
-          className="p-1 text-zinc-400 hover:text-zinc-200 cursor-pointer transition-colors"
+          className="retro text-[10px] p-1 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
           aria-label={isFullscreen ? "Minimize" : "Fullscreen"}
         >
-          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          {isFullscreen ? "[-]" : "[+]"}
         </button>
       </div>
 
       {output?.prompt && (
-        <div className="mb-3 p-2 border border-zinc-700 bg-zinc-800/50 text-xs text-zinc-300">
+        <div className="mb-3 p-2 border-2 border-border bg-card text-xs text-muted-foreground">
           {output.prompt}
         </div>
       )}
@@ -129,9 +138,9 @@ function PlanMeetup() {
         <PickTime
           timeSlots={availableSlots}
           selectedId={selectedTimeSlotId}
-          totalContacts={selectedContactIds.length}
+          selectedContactIds={selectedContactIds}
           onSelect={(id) =>
-            setState((prev) => ({ ...(prev ?? initialState), selectedTimeSlotId: id }))
+            setState((prev) => ({ ...mergeState(prev), selectedTimeSlotId: id }))
           }
           onNext={() => goTo("restaurant")}
           onBack={() => goTo("contacts")}
@@ -143,7 +152,7 @@ function PlanMeetup() {
           restaurants={restaurants}
           selectedId={selectedRestaurantId}
           onSelect={(id) =>
-            setState((prev) => ({ ...(prev ?? initialState), selectedRestaurantId: id }))
+            setState((prev) => ({ ...mergeState(prev), selectedRestaurantId: id }))
           }
           onNext={() => goTo("confirm")}
           onBack={() => goTo("time")}

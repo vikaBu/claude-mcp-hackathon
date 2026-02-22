@@ -1,5 +1,9 @@
 import { useState } from "react";
 import type { Contact, TimeSlot, Restaurant, MessagePreview } from "@/types/meetup";
+import { Button } from "@/components/ui/8bit/button";
+import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Badge } from "@/components/ui/8bit/badge";
+import { Separator } from "@/components/ui/8bit/separator";
 
 interface ConfirmSendProps {
   contacts: Contact[];
@@ -48,22 +52,23 @@ export function ConfirmSend({
   if (sent) {
     return (
       <div className="flex flex-col items-center gap-4 py-8">
-        <div className="text-4xl">+</div>
-        <p className="font-heading text-green-400 text-sm">Invites Sent!</p>
-        <p className="text-xs text-zinc-400 text-center">
+        <div className="text-4xl text-green-400">+</div>
+        <p className="retro text-green-400 text-sm">Invites Sent!</p>
+        <p className="text-xs text-muted-foreground text-center">
           WhatsApp messages sent to {contacts.length} people for{" "}
           {restaurant.name} on {formatDate(timeSlot.date)}.
         </p>
         <div className="flex flex-col gap-1 w-full mt-2">
           {contacts.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center gap-2 p-2 border border-green-500/20 bg-green-500/5"
-            >
-              <span className="text-green-400 text-xs">+</span>
-              <span className="text-sm">{c.name}</span>
-              <span className="text-xs text-zinc-500 ml-auto">{c.phone}</span>
-            </div>
+            <Card key={c.id} font="normal" className="!border-green-500/30 bg-green-500/5">
+              <CardContent font="normal" className="p-2 flex items-center gap-2">
+                <span className="text-green-400 text-xs">+</span>
+                <span className="text-sm text-foreground">{c.name}</span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {c.phone}
+                </span>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -72,73 +77,78 @@ export function ConfirmSend({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-zinc-400 font-heading">Review & Send</p>
+      <p className="retro text-[10px] text-muted-foreground">Review & Send</p>
 
       {/* Summary */}
-      <div className="border-2 border-zinc-700 bg-zinc-800/50 p-3">
-        <div className="flex flex-col gap-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-zinc-400">Who</span>
-            <span>{contacts.map((c) => c.name.split(" ")[0]).join(", ")}</span>
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex flex-col gap-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Who</span>
+              <span className="text-foreground">
+                {contacts.map((c) => c.name.split(" ")[0]).join(", ")}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">When</span>
+              <span className="text-foreground">
+                {formatDate(timeSlot.date)}, {formatTime(timeSlot.startTime)}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Where</span>
+              <span className="text-foreground">{restaurant.name}</span>
+            </div>
           </div>
-          <div className="h-px bg-zinc-700" />
-          <div className="flex justify-between">
-            <span className="text-zinc-400">When</span>
-            <span>
-              {formatDate(timeSlot.date)}, {formatTime(timeSlot.startTime)}
-            </span>
-          </div>
-          <div className="h-px bg-zinc-700" />
-          <div className="flex justify-between">
-            <span className="text-zinc-400">Where</span>
-            <span>{restaurant.name}</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Message previews */}
       <div className="flex flex-col gap-2">
-        <p className="text-[10px] text-zinc-500 font-heading">
+        <p className="retro text-[8px] text-muted-foreground">
           Message Previews
         </p>
         {previews.map((preview) => (
-          <div
-            key={preview.contactId}
-            className="border border-zinc-700 bg-zinc-800/30 p-2"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-xs">{preview.contactName}</span>
-              <span className="text-[10px] text-zinc-500">{preview.phone}</span>
-            </div>
-            <p className="text-xs text-zinc-300 leading-relaxed">
-              {preview.message}
-            </p>
-          </div>
+          <Card key={preview.contactId} font="normal">
+            <CardContent font="normal" className="p-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold text-xs text-foreground">
+                  {preview.contactName}
+                </span>
+                <Badge
+                  variant="secondary"
+                  font="normal"
+                  className="text-[8px] text-muted-foreground"
+                >
+                  {preview.phone}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {preview.message}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       <div className="flex gap-2">
-        <button
+        <Button
           onClick={onBack}
           disabled={sending}
-          className="flex-1 py-2.5 font-heading text-xs border-2 border-zinc-600 text-zinc-400 hover:border-zinc-500 cursor-pointer transition-colors disabled:opacity-50"
+          variant="outline"
+          className="flex-1 text-xs"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleSend}
           disabled={sending}
-          className={`
-            flex-1 py-2.5 font-heading text-xs border-2 transition-colors
-            ${
-              sending
-                ? "border-yellow-400/50 bg-yellow-400/10 text-yellow-300/50 cursor-wait"
-                : "border-green-500 bg-green-500/20 text-green-300 hover:bg-green-500/30 cursor-pointer"
-            }
-          `}
+          className="flex-1 text-xs"
         >
           {sending ? "Sending..." : "Send WhatsApp Invites"}
-        </button>
+        </Button>
       </div>
     </div>
   );

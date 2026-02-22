@@ -12,10 +12,18 @@
   --color-card: #18181b;
   --color-card-foreground: #e4e4e7;
   --color-border: #27272a;
+  --color-input: #27272a;
+  --color-ring: #a1a1aa;
   --color-muted: #27272a;
   --color-muted-foreground: #a1a1aa;
   --color-accent: #facc15;
   --color-accent-foreground: #18181b;
+  --color-primary: #facc15;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #27272a;
+  --color-secondary-foreground: #e4e4e7;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #e4e4e7;
 }
 
 @layer base {
