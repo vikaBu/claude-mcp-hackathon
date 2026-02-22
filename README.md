@@ -5,7 +5,7 @@
 A Claude MCP app that coordinates group meetups — finding overlapping availability, picking a restaurant everyone can eat at, and firing off personalised WhatsApp invites — all from a single conversation with Claude.
 
 **Try it now:** add `https://claude-mcp-hackathon-269be8d5.alpic.live/mcp` as a remote MCP server in Claude settings.
-
+Or in browser https://claude-mcp-hackathon-269be8d5.alpic.live/try
 ---
 
 ## The Problem
