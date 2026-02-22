@@ -57,65 +57,70 @@ export async function fetchContacts(userId: string): Promise<{ contacts: Contact
   return { contacts: (data as Contact[]) ?? [], error: null };
 }
 
+const DAY_ORDER = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+
+/** Returns the next N upcoming dates (from today) for a given day-of-week name */
+function nextDates(dayName: string, count = 4): string[] {
+  const targetDow = DAY_ORDER.indexOf(dayName);
+  const dates: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let offset = 0; dates.length < count; offset++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    if (d.getDay() === targetDow) {
+      dates.push(d.toISOString().slice(0, 10));
+    }
+  }
+  return dates;
+}
+
 export async function findOverlappingSlots(contactIds: string[]): Promise<{ slots: TimeSlot[]; error: Error | null }> {
   if (contactIds.length === 0) {
     return { slots: [], error: null };
   }
 
-  // Fetch all availability rows for the given contacts
   const { data, error } = await supabase
     .from("availability")
-    .select("contact_id, date, start_time, end_time")
+    .select("contact_id, day_of_week, start_time, end_time")
     .in("contact_id", contactIds);
 
   if (error) {
     return { slots: [], error: new Error(error.message) };
   }
 
-  const rows = data as { contact_id: string; date: string; start_time: string; end_time: string }[];
+  const rows = data as { contact_id: string; day_of_week: string; start_time: string; end_time: string }[];
 
-  // Group by date -> contact_id -> slots
-  const byDate = new Map<string, Map<string, { start: string; end: string }[]>>();
+  // Group by day_of_week -> contact_id -> windows
+  const byDay = new Map<string, Map<string, { start: string; end: string }[]>>();
   for (const row of rows) {
-    if (!byDate.has(row.date)) byDate.set(row.date, new Map());
-    const byContact = byDate.get(row.date)!;
+    if (!byDay.has(row.day_of_week)) byDay.set(row.day_of_week, new Map());
+    const byContact = byDay.get(row.day_of_week)!;
     if (!byContact.has(row.contact_id)) byContact.set(row.contact_id, []);
     byContact.get(row.contact_id)!.push({ start: row.start_time, end: row.end_time });
   }
 
   const slots: TimeSlot[] = [];
 
-  for (const [date, byContact] of byDate.entries()) {
-    // Skip dates where not all selected contacts have availability
+  for (const [day, byContact] of byDay.entries()) {
     if (!contactIds.every((id) => byContact.has(id))) continue;
 
-    // Compute intersection: latest start time and earliest end time across all contacts
     let overlapStart = "00:00";
     let overlapEnd = "23:59";
-
     for (const contactId of contactIds) {
-      const contactSlots = byContact.get(contactId)!;
-      // Use the slot with the earliest start for this contact
-      const slot = contactSlots.reduce((a, b) => (a.start <= b.start ? a : b));
-      if (slot.start > overlapStart) overlapStart = slot.start;
-      if (slot.end < overlapEnd) overlapEnd = slot.end;
+      const w = byContact.get(contactId)!.reduce((a, b) => (a.start <= b.start ? a : b));
+      if (w.start > overlapStart) overlapStart = w.start;
+      if (w.end < overlapEnd) overlapEnd = w.end;
     }
 
     if (overlapStart < overlapEnd) {
-      slots.push({
-        date,
-        startTime: overlapStart.slice(0, 5),
-        endTime: overlapEnd.slice(0, 5),
-      });
+      for (const date of nextDates(day)) {
+        slots.push({ date, startTime: overlapStart.slice(0, 5), endTime: overlapEnd.slice(0, 5) });
+      }
     }
   }
 
-  slots.sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) return dateCompare;
-    return a.startTime.localeCompare(b.startTime);
-  });
-
+  slots.sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
   return { slots, error: null };
 }
 
@@ -177,40 +182,54 @@ export async function fetchAllTimeSlotsWithAvailability(
 
   const { data, error } = await supabase
     .from("availability")
-    .select("contact_id, date, start_time, end_time")
+    .select("contact_id, day_of_week, start_time, end_time")
     .in("contact_id", contactIds);
 
   if (error) {
     return { slots: [], error: new Error(error.message) };
   }
 
-  const rows = data as { contact_id: string; date: string; start_time: string; end_time: string }[];
+  const rows = data as { contact_id: string; day_of_week: string; start_time: string; end_time: string }[];
 
-  // Group by (date, start_time, end_time), collect all contact_ids per slot
-  const slotMap = new Map<string, Set<string>>();
+  // Group by day_of_week -> contact_id -> windows
+  const byDay = new Map<string, Map<string, { start: string; end: string }[]>>();
   for (const row of rows) {
-    const key = `${row.date}|${row.start_time}|${row.end_time}`;
-    if (!slotMap.has(key)) slotMap.set(key, new Set());
-    slotMap.get(key)!.add(row.contact_id);
+    if (!byDay.has(row.day_of_week)) byDay.set(row.day_of_week, new Map());
+    const byContact = byDay.get(row.day_of_week)!;
+    if (!byContact.has(row.contact_id)) byContact.set(row.contact_id, []);
+    byContact.get(row.contact_id)!.push({ start: row.start_time, end: row.end_time });
   }
 
   const slots: UITimeSlot[] = [];
-  for (const [key, availableSet] of slotMap.entries()) {
-    const [date, startTime, endTime] = key.split("|");
-    slots.push({
-      id: `slot-${date}-${startTime.replace(":", "")}`,
-      date,
-      startTime: startTime.slice(0, 5),
-      endTime: endTime.slice(0, 5),
-      availableFor: Array.from(availableSet),
-    });
+
+  for (const [day, byContact] of byDay.entries()) {
+    // For each day, find which contacts are available and their intersection
+    const availableContactIds = contactIds.filter((id) => byContact.has(id));
+    if (availableContactIds.length === 0) continue;
+
+    // Compute the time window available to ALL contacts on this day
+    let overlapStart = "00:00";
+    let overlapEnd = "23:59";
+    for (const id of availableContactIds) {
+      const w = byContact.get(id)!.reduce((a, b) => (a.start <= b.start ? a : b));
+      if (w.start > overlapStart) overlapStart = w.start;
+      if (w.end < overlapEnd) overlapEnd = w.end;
+    }
+
+    if (overlapStart >= overlapEnd) continue;
+
+    for (const date of nextDates(day)) {
+      slots.push({
+        id: `slot-${date}-${overlapStart.replace(":", "")}`,
+        date,
+        startTime: overlapStart.slice(0, 5),
+        endTime: overlapEnd.slice(0, 5),
+        availableFor: availableContactIds,
+      });
+    }
   }
 
-  slots.sort((a, b) => {
-    const d = a.date.localeCompare(b.date);
-    return d !== 0 ? d : a.startTime.localeCompare(b.startTime);
-  });
-
+  slots.sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
   return { slots, error: null };
 }
 
