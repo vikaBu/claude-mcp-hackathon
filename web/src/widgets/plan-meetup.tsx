@@ -115,21 +115,6 @@ function PlanMeetup() {
     .filter(Boolean)
     .join(" | ");
 
-  // In standalone preview mode (no tool invocation), isPending stays true forever.
-  // Only show loading if we have a server context that's still resolving.
-  if (isPending && output !== undefined) {
-    return (
-      <div className={`${isDark ? "dark" : ""} p-4`}>
-        <div className="flex flex-col items-center gap-3 py-8">
-          <div className="retro text-2xl text-primary animate-pulse">...</div>
-          <p className="retro text-xs text-muted-foreground">
-            Loading Meetup Planner
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`${isDark ? "dark" : ""} p-4 max-w-lg mx-auto`} data-llm={llmSummary}>
       {/* Header */}
