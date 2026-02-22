@@ -1,180 +1,215 @@
-# Claude Hack Night - Task Manager
+# Let's Meet Up 🗓️
 
-A task management app built with [Skybridge](https://docs.skybridge.tech), featuring a kanban board with drag-and-drop, status management, and real-time sync via Supabase.
+> **Stop the 47-message group chat. Just meet.**
 
-**Try it now in Claude:** add `https://task-manager.alpic.live/mcp` as a remote MCP server in your Claude settings. Requires a Pro, Team, Max, or Enterprise account.
+A Claude MCP app that coordinates group meetups — finding overlapping availability, picking a restaurant everyone can eat at, and firing off personalised WhatsApp invites — all from a single conversation with Claude.
 
-## Hack Night Theme
+**Try it now:** add `https://claude-mcp-hackathon-269be8d5.alpic.live/mcp` as a remote MCP server in Claude settings.
 
-**Build an app that solves an everyday "at work" issue.**
+---
 
-Use this repo as a starting point and build your own MCP app. Here are some ideas to get you started:
+## The Problem
 
-- 🔖 **Bookmark Brain** — Save links with your own annotations, retrieve them later by describing what you vaguely remember
-- ⏰ **Deadline Radar** — Store upcoming deadlines with context, ask "what's due this week?"
-- 👋 **Learn Your Teammates** — For newcomers in a company, uses the model to play a "Time's Up" game of who's who
-- 💡 **Pitch Pile** — Dump 'someday' ideas, user feedback, emails, and call notes that shouldn't clutter the roadmap but need to be searchable. Like, aggregate, and sort
-- 🔤 **Acronym Atlas** — A repository for company-specific jargon and internal project codenames that confuse every new hire
-- 📚 **Learning Ledger** — A DB of posts or articles you want to read. Make summaries, find patterns, and quiz yourself
-- 🍕 **Rate Your Nearby Restaurants** — Rate places around the office and get suggestions for where to eat today
+Getting a group of friends together should be simple. Instead it looks like this:
 
-## Prerequisites
+> *"When is everyone free?"*
+> *"Idk, maybe Thursday?"*
+> *"I can't do Thursday"*
+> *"What about Saturday?"*
+> *[7 hours of silence]*
+> *"Actually I can do Thursday now"*
+> *"Where should we go?"*
+> *"Doesn't matter to me"*
+> *"Same"*
 
-### Node.js (v24.13+)
+**Let's Meet Up** solves this in four steps, inside Claude. No app to install. No Doodle poll to circulate. No group chat archaeology.
 
-- macOS: `brew install node`
-- Linux / other: [nodejs.org/en/download](https://nodejs.org/en/download)
+---
 
-### pnpm
+## The Four Archetypes
 
-[pnpm.io/installation](https://pnpm.io/installation)
+Real social groups have a mix of personalities — and a generic "hey we're meeting up!" message lands differently depending on who's reading it. This app knows that.
 
-```bash
-npm install -g pnpm
+### 🐝 The Bee
+*Organised & reliable.* Has their calendar colour-coded three months out. Will RSVP within the hour and remind everyone else twice. The reason the meetup actually happens.
+
+**Gets a message like:**
+> *"Hey Alice! 🐝 You can sit back on this one — I've sorted everything. We're going to Sushi Samba on Friday at 7pm. See you there!"*
+
+### ⚓ The Captain
+*Organised but flaky.* Loves the idea of plans, commits confidently, then ghosts for two days before resurfacing with a conflict. Responds well to firm, no-nonsense briefs that make backing out feel harder than showing up.
+
+**Gets a message like:**
+> *"Sam, mission briefing: ⚓ we're convening at Sushi Samba, 22 Bishops Gate, Friday at 19:00. Don't be late!"*
+
+### 🐶 The Golden Retriever
+*Reliable but laid-back.* Will go wherever, eat whatever, show up whenever — as long as the energy is right. Needs enthusiasm, not logistics.
+
+**Gets a message like:**
+> *"Jordan!! 🐶 We're all hanging out at Sushi Samba on Friday at 7 — it's going to be SO good. Can't wait to see you!"*
+
+### 🪰 The Fruit Fly
+*Spontaneous & unpredictable.* Ignores any plan made more than 48 hours in advance. But text them the same day with a short ping? 60% of the time, it works every time.
+
+**Gets a message like:**
+> *"Taylor 🪰 last-minute ping: Sushi Samba, Friday 19:00. Come if you can!"*
+
+---
+
+## How It Works
+
+```
+You: "Let's get dinner this week"
+              │
+              ▼
+  ┌───────────────────────┐
+  │  1. Pick your crew    │  Select from contacts (with archetypes
+  │                       │  + cuisine prefs + dietary restrictions)
+  └──────────┬────────────┘
+             │
+             ▼
+  ┌───────────────────────┐
+  │  2. Find a window     │  Server intersects everyone's weekly
+  │                       │  recurring availability → real dates
+  └──────────┬────────────┘
+             │
+             ▼
+  ┌───────────────────────┐
+  │  3. Pick a restaurant │  Yelp API filtered by the group's
+  │                       │  cuisines + dietary restrictions
+  └──────────┬────────────┘
+             │
+             ▼
+  ┌───────────────────────┐
+  │  4. Send the invites  │  Archetype-personalised WhatsApp
+  │                       │  deep-links, one tap per contact
+  └───────────────────────┘
 ```
 
-### Supabase CLI
+### Availability Without the Poll
 
-- macOS: `brew install supabase/tap/supabase`
-- Linux / other: [supabase.com/docs/guides/cli/getting-started](https://supabase.com/docs/guides/cli/getting-started)
+Rather than asking everyone to fill in a Doodle every time, availability is stored as **recurring weekly windows** — *"free Wednesday evenings, Thursday evenings"* — which is how most people actually think about their time.
 
-### Supabase Project
+When you select a group, the server:
+1. Fetches everyone's `(day_of_week, start_time, end_time)` from Supabase
+2. Groups by day
+3. Computes the **intersection** (latest start, earliest end) across all selected contacts
+4. Projects the next 4 upcoming dates for each day with overlap
 
-Create a project at [supabase.com/dashboard](https://supabase.com/dashboard). You'll need:
-
-- **Project URL** (`SUPABASE_URL`)
-- **Service Role Key** (`SUPABASE_SERVICE_ROLE_KEY`) — found in Settings > API
-
-### Clerk Project
-
-Create a project at [clerk.com/dashboard](https://clerk.com/dashboard). You'll need:
-
-- **Secret Key** (`CLERK_SECRET_KEY`)
-- **Publishable Key** (`CLERK_PUBLISHABLE_KEY`)
-
-Enable Dynamic Client Registration (DCR) in the Clerk Dashboard:
-
-1. Go to **Configure** > **Developers** > **OAuth applications** > **Settings**
-2. Toggle on **Dynamic client registration**
-
-### Claude Code (optional, for AI-assisted development)
-
-[docs.anthropic.com/en/docs/claude-code/overview](https://docs.anthropic.com/en/docs/claude-code/overview)
-
-```bash
-npm install -g @anthropic-ai/claude-code
+```
+Wednesday:
+  Alice  18:00–22:00
+  Bob    18:00–21:30  ← tightest end
+  Cara   18:00–21:00  ← tightest end
+  Dan    17:00–23:00
+  Finn   18:00–22:00
+              ──────
+  Overlap → 18:00–21:00  ✓  (next 4 Wednesdays shown)
 ```
 
-## Setup
+### Restaurant Matching
 
-**1. Install dependencies**
+Each contact stores cuisine preferences and dietary restrictions. When looking for somewhere to eat, the app unions preferences across the whole selected group and queries Yelp with those filters — so a vegetarian and a meat-eater both end up somewhere they can actually order from.
+
+### Personalised Messages
+
+Each contact has an archetype. The invite message is written to match their communication style — detailed and warm for Bees, punchy for Captains, high-energy for Golden Retrievers, ultra-brief for Fruit Flies. Dietary accommodations are called out for contacts who have them. Messages open pre-filled in WhatsApp; you just tap send.
+
+---
+
+## Tech Stack
+
+| Layer | Tech |
+|-------|------|
+| MCP Framework | [Skybridge](https://docs.skybridge.tech) |
+| Server | Node.js + Express (TypeScript) |
+| Widget UI | React 19 + [8bitcn](https://www.8bitcn.com/) retro pixel components |
+| Database | Supabase (PostgreSQL) |
+| Restaurants | Yelp Fusion API |
+| Messaging | WhatsApp deep-links (`wa.me`) |
+| Deployment | [Alpic](https://alpic.ai) |
+
+---
+
+## Running Locally
+
+**Prerequisites:** Node.js 24+, pnpm, Supabase CLI
 
 ```bash
+# Install dependencies
 pnpm i
-```
 
-**2. Configure environment variables**
-
-```bash
+# Configure environment
 cp .env.example .env
-```
+# Fill in: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-Fill in your keys:
-
-```
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-CLERK_SECRET_KEY=sk_test_xxxxx
-CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
-```
-
-**3. Link your Supabase project and push migrations**
-
-```bash
+# Push database schema + seed data
 supabase link
 supabase db push
+
+# Start dev server
+volta run --node 24.10.0 -- npx skybridge dev
+# → Devtools at http://localhost:3000
+# → MCP endpoint at http://localhost:3000/mcp
 ```
 
-This creates the `tasks` table and the `toggle_task` RPC function.
-
-**4. Start the dev server**
-
+**Test with Claude (local):**
 ```bash
-pnpm dev
-```
-
-The server runs at `http://localhost:3000`. For testing, we recommend using the Skybridge devtools available at [http://localhost:3000](http://localhost:3000) (no `/mcp` suffix).
-
-## Connecting to Claude
-
-When you're ready to test with Claude, tunnel your local server with [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) to expose the MCP endpoint at `/mcp`:
-
-```bash
+# Tunnel to localhost
 cloudflared tunnel --url http://localhost:3000
+
+# Add the tunnel URL + /mcp as a remote MCP server in Claude settings
+# e.g. https://xxx.trycloudflare.com/mcp
 ```
 
-Then add your tunnel URL with `/mcp` appended (e.g. `https://xxx.trycloudflare.com/mcp`) as a remote MCP server in Claude settings.
-
-## Alternative: Using Goose (no Claude Pro required)
-
-If you don't have a Claude Pro account, you can use [Goose](https://github.com/block/goose) as a compatible MCP client. **Only version 1.21.2 works** — later versions are broken.
-
-**macOS (Apple Silicon):**
-
+**Build for production:**
 ```bash
-curl -L https://github.com/block/goose/releases/download/v1.21.2/goose-aarch64-apple-darwin.tar.bz2 | tar xj
-sudo mv goose /usr/local/bin/
+pnpm build   # skybridge build + tsc server compilation
+pnpm start   # skybridge start (requires dist/index.js)
 ```
 
-**macOS (Intel):**
+---
 
-```bash
-curl -L https://github.com/block/goose/releases/download/v1.21.2/goose-x86_64-apple-darwin.tar.bz2 | tar xj
-sudo mv goose /usr/local/bin/
+## Project Structure
+
+```
+server/src/
+  index.ts        — Express app, CORS, static assets, port binding
+  server.ts       — MCP widgets: plan-meetup + lets-meet-up tools
+  meetup-db.ts    — Supabase queries + availability intersection logic
+  restaurants.ts  — Yelp API integration
+  env.ts          — Environment variable validation (t3-env)
+
+web/src/
+  widgets/
+    plan-meetup.tsx     — Main 4-step widget (mounts in Claude)
+  components/steps/
+    Splash.tsx          — Welcome + mode selection (social vs work)
+    SelectContacts.tsx  — Contact picker with archetype badges
+    PickTime.tsx        — Overlapping time slot selection
+    PickRestaurant.tsx  — Restaurant cards with cuisine/diet filters
+    ConfirmSend.tsx     — Message previews + WhatsApp send buttons
+  data/
+    meetup-service.ts   — Client-side data helpers
+    mock-contacts.ts    — Fallback demo contacts
+
+supabase/migrations/    — Schema definitions + seed data
 ```
 
-**Linux (x86_64):**
+---
 
-```bash
-curl -L https://github.com/block/goose/releases/download/v1.21.2/goose-x86_64-unknown-linux-gnu.tar.bz2 | tar xj
-sudo mv goose /usr/local/bin/
-```
+## Roadmap / Nice-to-Haves
 
-All binaries are available on the [v1.21.2 release page](https://github.com/block/goose/releases/tag/v1.21.2).
+- **Add a friend** — invite someone by phone number; they choose their own archetype and fill in their weekly availability via a shared link
+- **iCal / Google Calendar sync** — pull real free/busy instead of manually-set windows
+- **Memory across meetups** — Claude remembers where you've been with which group, surfaces patterns (*"you always end up doing Italian on Wednesdays"*)
+- **Group dynamics balancing** — flags when the invite list has too many Fruit Flies and suggests a backup plan
+- **Booking integration** — OpenTable / Resy links directly from restaurant cards
+- **Post-meetup follow-up** — auto-send a "great seeing you!" the next morning, or surface who you haven't seen in a while
+- **Work mode** — same flow but for team standups, socials, and retrospectives; venue options include office, pub, or Google Meet
 
-## Supabase Commands
+---
 
-```bash
-# Link your local project to a remote Supabase project (required once)
-supabase link
+## Built at
 
-# Push local migrations to the remote database
-supabase db push
-
-# Reset the remote database (drops all data, re-applies migrations)
-supabase db reset --linked
-
-# Create a new migration file
-supabase migration new <migration_name>
-
-# Check migration status
-supabase migration list
-```
-
-Migrations live in `supabase/migrations/`. After editing or adding a migration file, run `supabase db push` to apply it to your remote database.
-
-## Deploy to Production
-
-Use [Alpic](https://alpic.ai/) to deploy your app to production:
-
-[![Deploy on Alpic](https://assets.alpic.ai/button.svg)](https://app.alpic.ai/new/clone?repositoryUrl=https%3A%2F%2Fgithub.com%2Falpic-ai%2Fclaude-hacknight-starter-20-02-2026)
-
-Then add your deployed URL with `/mcp` appended (e.g. `https://your-app-name.alpic.live/mcp`) as a remote MCP server in Claude settings.
-
-## Resources
-
-- [Skybridge Documentation](https://docs.skybridge.tech/)
-- [Apps SDK Documentation](https://developers.openai.com/apps-sdk)
-- [MCP Apps Documentation](https://github.com/modelcontextprotocol/ext-apps/tree/main)
-- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
-- [Alpic Documentation](https://docs.alpic.ai/)
+[Skybridge MCP Hackathon](https://docs.skybridge.tech) · February 2026
