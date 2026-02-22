@@ -41,7 +41,7 @@ const initialState: WidgetState = {
 };
 
 function PlanMeetup() {
-  const { output, isPending } = useToolInfo<"plan-meetup">();
+  const { output } = useToolInfo<"plan-meetup">();
   const { theme } = useLayout();
   const isDark = theme === "dark";
   const [displayMode, requestDisplayMode] = useDisplayMode();
