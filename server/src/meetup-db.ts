@@ -74,25 +74,42 @@ export async function findOverlappingSlots(contactIds: string[]): Promise<{ slot
 
   const rows = data as { contact_id: string; date: string; start_time: string; end_time: string }[];
 
-  // Group by (date, start_time, end_time) and count distinct contact_ids
-  const slotMap = new Map<string, Set<string>>();
+  // Group by date -> contact_id -> slots
+  const byDate = new Map<string, Map<string, { start: string; end: string }[]>>();
   for (const row of rows) {
-    const key = `${row.date}|${row.start_time}|${row.end_time}`;
-    if (!slotMap.has(key)) {
-      slotMap.set(key, new Set());
-    }
-    slotMap.get(key)!.add(row.contact_id);
+    if (!byDate.has(row.date)) byDate.set(row.date, new Map());
+    const byContact = byDate.get(row.date)!;
+    if (!byContact.has(row.contact_id)) byContact.set(row.contact_id, []);
+    byContact.get(row.contact_id)!.push({ start: row.start_time, end: row.end_time });
   }
 
   const slots: TimeSlot[] = [];
-  for (const [key, contactSet] of slotMap.entries()) {
-    if (contactSet.size === contactIds.length) {
-      const [date, startTime, endTime] = key.split("|");
-      slots.push({ date, startTime, endTime });
+
+  for (const [date, byContact] of byDate.entries()) {
+    // Skip dates where not all selected contacts have availability
+    if (!contactIds.every((id) => byContact.has(id))) continue;
+
+    // Compute intersection: latest start time and earliest end time across all contacts
+    let overlapStart = "00:00";
+    let overlapEnd = "23:59";
+
+    for (const contactId of contactIds) {
+      const contactSlots = byContact.get(contactId)!;
+      // Use the slot with the earliest start for this contact
+      const slot = contactSlots.reduce((a, b) => (a.start <= b.start ? a : b));
+      if (slot.start > overlapStart) overlapStart = slot.start;
+      if (slot.end < overlapEnd) overlapEnd = slot.end;
+    }
+
+    if (overlapStart < overlapEnd) {
+      slots.push({
+        date,
+        startTime: overlapStart.slice(0, 5),
+        endTime: overlapEnd.slice(0, 5),
+      });
     }
   }
 
-  // Sort by date then startTime
   slots.sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
