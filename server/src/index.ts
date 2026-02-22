@@ -1,11 +1,5 @@
 import cors from "cors";
 import express from "express";
-import { clerkMiddleware } from "@clerk/express";
-import {
-  mcpAuthClerk,
-  protectedResourceHandlerClerk,
-  authServerMetadataHandlerClerk,
-} from "@clerk/mcp-tools/express";
 import { widgetsDevServer } from "skybridge/server";
 import { mcp } from "./middleware.js";
 import server from "./server.js";
@@ -13,7 +7,6 @@ import server from "./server.js";
 const app = express();
 
 // Trust the proxy (cloudflared/Alpic) so req.protocol returns https
-// This ensures OAuth metadata URLs use https:// not http://
 app.set("trust proxy", 1);
 
 app.use(express.json());
@@ -57,25 +50,9 @@ if (nodeEnv === "production") {
 
 app.use(cors());
 
-if (nodeEnv === "production") {
-  app.use(clerkMiddleware());
-  app.use("/mcp", mcpAuthClerk);
-}
-
 app.use(mcp(server));
 
-if (nodeEnv === "production") {
-  app.get(
-    "/.well-known/oauth-protected-resource/mcp",
-    protectedResourceHandlerClerk({ scopes_supported: ["email", "profile"] }),
-  );
-
-  app.get(
-    "/.well-known/oauth-authorization-server",
-    authServerMetadataHandlerClerk,
-  );
-}
-
-app.listen(3000, () => {
-  console.log("Server listening on http://localhost:3000");
+const port = Number(process.env.__PORT ?? 3000);
+app.listen(port, () => {
+  console.log(`Server listening on http://localhost:${port}`);
 });
