@@ -104,7 +104,7 @@ export async function sendMessages(
 export const WORK_VENUES: WorkVenue[] = [
   { id: "office", name: "In Office", description: "Book a meeting room", icon: "🏢" },
   { id: "google_meet", name: "Over Google Meet", description: "Virtual video call", icon: "📹" },
-  { id: "pub", name: "At the Pub", description: "Casual work chat over drinks", icon: "🍺" },
+  { id: "pub", name: "At the Pub", description: "The correct option", icon: "🍺" },
 ];
 
 export function getWorkVenues(): WorkVenue[] {
